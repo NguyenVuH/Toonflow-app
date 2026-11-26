@@ -137,6 +137,17 @@ public class mobileActivity extends Activity {
     int progressSize = (int) (32 * getResources().getDisplayMetrics().density);
     root.addView(progressView, new FrameLayout.LayoutParams(progressSize, progressSize, Gravity.CENTER));
     setContentView(root);
+    // Keep the local Toonflow host process important while the Activity is backgrounded.
+    // The foreground service is not a substitute for durable server-side workflow persistence.
+    try {
+      Intent serviceIntent = new Intent(this, comicProductionService.class);
+      serviceIntent.setAction(comicProductionService.ACTION_START);
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(serviceIntent);
+      else startService(serviceIntent);
+    } catch (RuntimeException error) {
+      Log.e("ToonflowMobile", "Unable to start background workspace service", error);
+      Toast.makeText(this, "Background mode could not start. Keep Toonflow open while local tasks run.", Toast.LENGTH_LONG).show();
+    }
     initializeSystemWebView();
     new Thread(this::startBun, "mobileBun").start();
   }
@@ -988,7 +999,10 @@ public class mobileActivity extends Activity {
     fileCallback = null;
     if (pendingSave != null) finishSave(pendingSave, null, null);
     pendingSave = null;
-    stopBun();
+    if (isFinishing()) {
+      stopBun();
+      stopService(new Intent(this, comicProductionService.class));
+    }
     mainHandler.removeCallbacksAndMessages(null);
     if (geckoPort != null) geckoPort.disconnect();
     geckoPort = null;
