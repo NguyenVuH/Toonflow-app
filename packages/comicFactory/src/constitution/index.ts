@@ -73,10 +73,18 @@ export function assertNoHardRuleConflicts(rules: ConstitutionRule[]): void {
   }
 }
 
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+  }
+  return value;
+}
+
 export function buildRuleContextPackage(snapshot: ConstitutionSnapshot, context: RuleContext) {
   const rules = resolveRules(snapshot, context);
   assertNoHardRuleConflicts(rules);
-  return Object.freeze({
+  return deepFreeze({
     seriesId: snapshot.seriesId,
     constitutionVersion: snapshot.version,
     rules: rules.map(rule => ({ ...rule })),
