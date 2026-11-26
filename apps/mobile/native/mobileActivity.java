@@ -148,6 +148,9 @@ public class mobileActivity extends Activity {
       Log.e("ToonflowMobile", "Unable to start background workspace service", error);
       Toast.makeText(this, "Background mode could not start. Keep Toonflow open while local tasks run.", Toast.LENGTH_LONG).show();
     }
+    if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+      requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, 41022);
+    }
     initializeSystemWebView();
     new Thread(this::startBun, "mobileBun").start();
   }
