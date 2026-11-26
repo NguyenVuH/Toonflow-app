@@ -53,6 +53,7 @@ export function detectPredicateConflicts(rules: ConstitutionRule[]): RuleConflic
       const a = hard[i], b = hard[j];
       if (a.predicate?.path !== b.predicate?.path) continue;
       const pa = a.predicate, pb = b.predicate;
+      if (!pa || !pb) continue;
       const contradictory =
         (pa.kind === "equals" && pb.kind === "equals" && JSON.stringify(pa.value) !== JSON.stringify(pb.value)) ||
         (pa.kind === "equals" && pb.kind === "not_equals" && JSON.stringify(pa.value) === JSON.stringify(pb.value)) ||
