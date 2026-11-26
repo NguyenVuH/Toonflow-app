@@ -60,7 +60,7 @@ jobs:
         run: |
           $sdkmanager = Join-Path $env:ANDROID_HOME "cmdline-tools\latest\bin\sdkmanager.bat"
           if (!(Test-Path $sdkmanager)) { throw "Android SDK manager was not installed" }
-          "y" | & $sdkmanager --licenses
+          1..10 | ForEach-Object { "y" } | & $sdkmanager --licenses
           if ($LASTEXITCODE -ne 0) { throw "Unable to accept Android SDK licenses" }
       - name: Install dependencies
         run: bun install
