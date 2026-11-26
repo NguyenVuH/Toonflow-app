@@ -33,7 +33,7 @@ jobs:
         with:
           bun-version: "1.4.3"
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
       - name: Typecheck Comic Factory package
         run: bun run --cwd packages/comicFactory typecheck
       - name: Run Comic Factory tests
@@ -63,7 +63,7 @@ jobs:
           "y" | & $sdkmanager --licenses
           if ($LASTEXITCODE -ne 0) { throw "Unable to accept Android SDK licenses" }
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
       - name: Prepare Android runtime and SDK dependencies
         run: bun run --cwd apps/mobile setup
       - name: Typecheck mobile app
