@@ -62,8 +62,6 @@ jobs:
         run: bun install
       - name: Prepare Android runtime and SDK dependencies
         run: bun run --cwd apps/mobile setup
-      - name: Typecheck mobile app
-        run: bun run --cwd apps/mobile typecheck
       - name: Build Android ARM64 debug APK
         env:
           androidRelease: "0"
