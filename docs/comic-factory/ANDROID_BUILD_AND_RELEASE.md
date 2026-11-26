@@ -57,3 +57,17 @@ Required mobile acceptance tests:
 - deny notification permission and verify the app explains degraded background visibility;
 - force-stop and relaunch to verify durable jobs resume from server state rather than relying on the Android process;
 - Vietnamese text round-trip through storage, agent task payloads, dialogue overlay, PDF and EPUB.
+
+
+## Changes currently present on feature/comic-factory
+
+- Android manifest uses `fullSensor` so both portrait and landscape orientations are allowed.
+- A native `comicProductionService` foreground service has been added with a low-importance persistent notification and `dataSync` service type.
+- The Activity starts the service and requests notification permission on Android 13+.
+- The service improves process importance while the app is backgrounded. It does not yet own or supervise the Bun child process.
+- The Activity still starts and owns the Bun child process and stops it when the Activity is destroyed. Therefore this is an initial background-liveness improvement, NOT full durable background execution or process-death recovery.
+- Full background reliability still requires moving Bun lifecycle ownership into a service, durable backend job persistence, restart/reconciliation, and device tests. Do not advertise guaranteed continuation after process kill, force-stop, reboot or OEM task killer.
+
+## Vietnamese workflow
+
+The dialogue settings schema defaults to Vietnamese (`vi`). UI, database, prompt, tool payload, logs, fonts and export must remain UTF-8. The current schema is configuration support only; full Vietnamese end-to-end round-trip and visual typography tests are still pending.
