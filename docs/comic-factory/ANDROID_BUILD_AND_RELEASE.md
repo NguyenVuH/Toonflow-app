@@ -22,3 +22,38 @@ Use repository's existing mobile setup/build scripts and Android packaging workf
 CI should install the pinned Bun version, JDK and Android SDK; install dependencies; run package typechecks, unit/contract/integration tests; run mobile setup and build on Windows runner; upload APK as workflow artifact; install APK on emulator/device where available and smoke-test launch/navigation/backend health; attach to GitHub Release only after an explicitly approved release.
 
 Existing debug workflow already contains Android setup/build steps. Prefer extending/reusing it over duplicating build logic. Its workflow_dispatch cannot be triggered from a GitHub read/write contents API alone; use Actions UI or an authorized workflow-dispatch capability.
+
+
+## Orientation and background execution requirements
+
+The existing Android activity was configured with `sensorLandscape`. The Comic Factory branch changes this to `fullSensor` so portrait and landscape orientations are permitted. All mobile screens must use responsive layouts and preserve editor state across configuration changes.
+
+Background production is not equivalent to keeping the Activity alive. The existing `mobileActivity` currently owns the Bun child process and stops it during Activity destruction. Therefore background execution is NOT yet implemented by the orientation change.
+
+Before claiming background production, refactor process ownership into a dedicated Android foreground service with:
+- a persistent, user-visible notification and notification channel;
+- appropriate foreground-service type and permissions for the actual workload;
+- a bound/local IPC contract for Activity status and commands;
+- service-owned Bun process lifecycle, health checks and controlled restart;
+- durable job state persisted by the backend so process death can resume safely;
+- notification permission handling on Android 13+;
+- battery-optimization guidance and clear user stop controls;
+- no promise of surviving force-stop, reboot or vendor task-killer without explicit recovery behavior.
+
+Prefer server-side durable workers for generation jobs whenever a reachable backend is configured. Android foreground service should primarily keep the on-device Toonflow host alive when local execution is explicitly selected. Do not run GPU/model workloads on the phone by default.
+
+Vietnamese workflow support:
+- use UTF-8 end-to-end for prompts, story bible, agent instructions, tool payloads, dialogue, filenames where supported, logs and exports;
+- choose fonts with complete Vietnamese glyph coverage and embed/subset fonts in PDF where licensing permits;
+- normalize input consistently (NFC) without destroying user-authored text;
+- test diacritics, combining marks, punctuation, line wrapping, bubble overflow, OCR and search;
+- keep provider/model tokenization limitations visible and never silently strip diacritics.
+
+Required mobile acceptance tests:
+- cold launch in portrait and landscape;
+- rotate during story editing, file upload, reader and production monitoring without losing state;
+- background the app while a foreground service is running and verify job status continues;
+- return from background and reconcile server state;
+- deny notification permission and verify the app explains degraded background visibility;
+- force-stop and relaunch to verify durable jobs resume from server state rather than relying on the Android process;
+- Vietnamese text round-trip through storage, agent task payloads, dialogue overlay, PDF and EPUB.
