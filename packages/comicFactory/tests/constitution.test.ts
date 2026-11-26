@@ -30,6 +30,8 @@ describe("constitution rule resolution", () => {
     expect(result.constitutionVersion).toBe(3);
     expect(result.hardRules).toHaveLength(2);
     expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(result.rules)).toBe(true);
+    expect(Object.isFrozen(result.rules[0])).toBe(true);
   });
 
   test("blocks contradictory active hard predicates", () => {
