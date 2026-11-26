@@ -87,7 +87,7 @@ export function scheduleReadyTasks(tasks: TaskRecord[], completedIds: string[], 
   if (!Number.isInteger(limit) || limit < 1) throw new Error("Concurrency limit must be a positive integer");
   const completed = new Set(completedIds);
   const nowMs = Date.parse(now);
-  return tasks.map(taskRecordSchema.parse).filter(task =>
+  return tasks.map(task => taskRecordSchema.parse(task)).filter(task =>
     ["pending", "ready", "retry_wait"].includes(task.status) &&
     (!task.nextAttemptAt || Date.parse(task.nextAttemptAt) <= nowMs) &&
     task.dependencies.every(id => completed.has(id))
