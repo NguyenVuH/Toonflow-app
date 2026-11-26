@@ -1,6 +1,13 @@
 name: Comic Factory validation
 
 on:
+  workflow_dispatch:
+    inputs:
+      build_android:
+        description: Build APK only after production acceptance gates are ready
+        type: boolean
+        required: true
+        default: false
   push:
     branches:
       - feature/comic-factory
@@ -40,6 +47,7 @@ jobs:
         run: bun test packages/comicFactory/tests
 
   android-debug:
+    if: github.event_name == 'workflow_dispatch' && inputs.build_android == true
     name: Android ARM64 debug APK
     runs-on: windows-2025
     timeout-minutes: 100
