@@ -11,3 +11,4 @@ export * from "./skills/defaults";
 export * from "./tools";
 export * from "./planning";
 export * from "./world";
+export * from "./rendering";

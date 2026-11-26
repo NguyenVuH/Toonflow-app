@@ -6,3 +6,4 @@ export * from "./media";
 export * from "./workflow";
 export * from "./runtime";
 export * from "./skill";
+export * from "./comic";
