@@ -1,4 +1,3 @@
-import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 import { SqliteTaskRepository } from "../src/persistence";
 import { runReadyWorkflow } from "../src/runtime";
@@ -22,7 +21,7 @@ const task = (taskId: string, nodeId: string, dependencies: string[] = []): Task
 });
 
 describe("SQLite task repository", () => {
-  test("persists tasks across repository instances", () => {
+  test("stores and retrieves validated tasks", () => {
     const path = ":memory:";
     const first = new SqliteTaskRepository(path);
     first.insert(task("task-a", "a"));
@@ -33,7 +32,6 @@ describe("SQLite task repository", () => {
 
 describe("workflow runner", () => {
   test("executes only ready nodes and commits only validated outputs", async () => {
-    const db = new Database(":memory:");
     const repo = new SqliteTaskRepository(":memory:");
     repo.insert(task("task-a", "a"));
     repo.insert(task("task-b", "b", ["task-a"]));
@@ -47,7 +45,6 @@ describe("workflow runner", () => {
     expect(repo.get("task-a")?.status).toBe("succeeded");
     expect(repo.get("task-b")?.status).toBe("pending");
     repo.close();
-    db.close();
   });
 
   test("does not commit invalid worker output", async () => {
