@@ -19,7 +19,6 @@ on:
       - "apps/mobile/**"
       - "docs/comic-factory/**"
       - ".github/workflows/comic-factory-ci.yml"
-  workflow_dispatch:
 
 permissions:
   contents: read
