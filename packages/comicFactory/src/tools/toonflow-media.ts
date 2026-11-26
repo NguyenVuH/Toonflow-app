@@ -39,7 +39,7 @@ export function registerToonflowMediaTools(registry:ToolRegistry,media:ToonflowM
         ...(input.ratio?{ratio:input.ratio}:{}),...(input.size?{size:input.size}:{}),
         other:{...input.parameters,negativePrompt:negative}
       },context.signal);
-      return {files:files.filter(file=>file.mediaType==="image")};
+      return {files};
     }
   };
   registry.register(imageTool);

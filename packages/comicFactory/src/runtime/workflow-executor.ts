@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { WorkflowGraph } from "../schemas/workflow";
 import type { TaskRecord } from "../schemas/runtime";
 import type { TaskRepository } from "../persistence/sqlite";
@@ -61,8 +62,9 @@ export async function runWorkflowToCompletion(input:{
     const checked=await input.validate(node.nodeId,result.output);
     if(!checked.valid)throw new Error("Output validation failed: "+checked.errors.join("; "));
     if(!Number.isFinite(result.costUsd)||result.costUsd<0)throw new Error("Invalid execution cost");
-    const hash=await sha256(JSON.stringify(result.output));
-    input.artifacts.put({workflowId:input.graph.workflowId,nodeId:node.nodeId,version:input.graph.version,output:result.output,contentHash:hash,createdAt:now()});
+    const serializableOutput=z.json().parse(result.output);
+    const hash=await sha256(JSON.stringify(serializableOutput));
+    input.artifacts.put({workflowId:input.graph.workflowId,nodeId:node.nodeId,version:input.graph.version,output:serializableOutput,contentHash:hash,createdAt:now()});
     task=transitionTask(task,{type:"validate",workerId:input.workerId,now:now()});
     if(!input.repository.update(task,"running"))throw new Error("Task validation transition lost");
     task=transitionTask(task,{type:"succeed",workerId:input.workerId,now:now(),actualCostUsd:result.costUsd});
