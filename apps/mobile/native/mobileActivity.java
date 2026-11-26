@@ -999,10 +999,10 @@ public class mobileActivity extends Activity {
     fileCallback = null;
     if (pendingSave != null) finishSave(pendingSave, null, null);
     pendingSave = null;
-    if (isFinishing()) {
-      stopBun();
-      stopService(new Intent(this, comicProductionService.class));
-    }
+    // Activity destruction owns child-process cleanup. Backgrounding alone does not destroy
+    // the Activity; the foreground service keeps the app process important while it is stopped.
+    stopBun();
+    if (isFinishing()) stopService(new Intent(this, comicProductionService.class));
     mainHandler.removeCallbacksAndMessages(null);
     if (geckoPort != null) geckoPort.disconnect();
     geckoPort = null;
