@@ -6,7 +6,7 @@ export type ToonflowMediaBridge = {
   generateImage(request: {
     providerId:string;modelId:string;prompt:string;other?:Record<string,unknown>;
     outputDirectory?:string;images?:Array<{path:string;mimeType:string}>;ratio?:string;size?:string;
-  }, signal?:AbortSignal): Promise<Array<{path:string;mimeType:string;mediaType:"image"|"video"|"audio"}>>;
+  }, signal?:AbortSignal): Promise<Array<{path:string;mimeType:string;mediaType:"image"}>>;
   generateAudio(request: {
     providerId:string;modelId:string;prompt:string;other?:Record<string,unknown>;outputDirectory?:string;
   }, signal?:AbortSignal): Promise<Array<{path:string;mimeType:string;mediaType:"image"|"video"|"audio"}>>;
