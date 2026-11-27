@@ -3,6 +3,7 @@ import { agentSpecSchema, taskPackageSchema } from "../schemas/agent";
 import type { WorkerProfile } from "./capability-matcher";
 import { requireWorker } from "./capability-matcher";
 import { compileAgentInstruction } from "./instructions";
+import type { SkillRegistry } from "../skills/registry";
 
 export type DelegatedWorker = {
   workerId: string;
@@ -35,6 +36,7 @@ export async function delegateAgentTask(input: {
   workers: WorkerProfile[];
   workerAdapters: DelegatedWorker[];
   validateOutput: (output: unknown, task: TaskPackage) => Promise<{valid:boolean;errors:string[]}>;
+  skillRegistry?: SkillRegistry;
   signal?: AbortSignal;
 }): Promise<DelegationResult> {
   const spec=agentSpecSchema.parse(input.spec);
@@ -44,7 +46,7 @@ export async function delegateAgentTask(input: {
   const adapter=input.workerAdapters.find(item=>item.workerId===selected.workerId);
   if(!adapter)throw new Error("Matched worker has no execution adapter");
   input.signal?.throwIfAborted();
-  const compiled=compileAgentInstruction(spec,task);
+  const compiled=compileAgentInstruction(spec,task,input.skillRegistry);
   const result=await adapter.run({
     instruction:compiled.instruction,
     task,

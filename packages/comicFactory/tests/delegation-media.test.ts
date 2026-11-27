@@ -2,6 +2,8 @@ import {describe,expect,test} from "bun:test";
 import {ToolRegistry} from "../src/tools/registry";
 import {registerToonflowMediaTools} from "../src/tools/toonflow-media";
 import {delegateAgentTask} from "../src/agents/delegation";
+import {SkillRegistry} from "../src/skills/registry";
+import {defaultComicSkills} from "../src/skills/defaults";
 import type {AgentSpec,TaskPackage} from "../src/schemas/agent";
 const now="2026-11-26T00:00:00.000Z";
 describe("Toonflow media bridge",()=>{
@@ -27,9 +29,11 @@ describe("agent delegation",()=>{
  test("compiles instructions and validates worker output before returning",async()=>{
   const spec:AgentSpec={agentId:"writer",version:1,role:"Writer",objective:"Write scenes",responsibilities:["Write scenes"],prohibitedActions:["Change canon"],requiredCapabilities:["reasoning"],requiredContext:[],allowedToolIds:["story.read"],deniedToolIds:[],inputSchema:{type:"object"},outputSchema:{type:"object"},instructions:"Follow rules",acceptanceCriteria:["Valid scene"],timeoutSeconds:60,maxAttempts:2,active:true};
   const task:TaskPackage={taskId:"t1",idempotencyKey:"t1-idempotency",parentGoalId:"g1",agentId:"writer",agentSpecVersion:1,objective:"Write scene 1",scope:{seriesId:"s1"},dependencies:[],input:{},contextRefs:[],constitutionVersion:1,requiredRuleIds:[],assetRefs:[],allowedToolIds:["story.read"],outputSchema:{type:"object"},acceptanceCriteria:["Scene has objective"],timeoutSeconds:60,maxAttempts:2,createdAt:now};
+  const skillRegistry=new SkillRegistry();skillRegistry.register(defaultComicSkills[0]!);
+  const taskWithSkill:TaskPackage={...task,skillRefs:[{skillId:"comic.preproduction",version:1}]};
   const result=await delegateAgentTask({
-   spec,task,workers:[{workerId:"w1",capabilities:["reasoning"],provider:{providerId:"p",modelId:"m",modalities:["text"],supportsNegativePrompt:false,supportsImageReferences:false,maxImageReferences:0,supportsImageEditing:false,supportsSeed:false,supportsAsyncJobs:false,supportsCancellation:false,supportedRatios:[],supportedOutputFormats:[]},enabled:true,maxConcurrent:2,currentConcurrent:0}],
-   workerAdapters:[{workerId:"w1",providerId:"p",modelId:"m",run:async input=>{expect(input.instruction).toContain("Write scene 1");return{output:{scene:"ok"},costUsd:0.01};}}],
+   spec,task:taskWithSkill,skillRegistry,workers:[{workerId:"w1",capabilities:["reasoning"],provider:{providerId:"p",modelId:"m",modalities:["text"],supportsNegativePrompt:false,supportsImageReferences:false,maxImageReferences:0,supportsImageEditing:false,supportsSeed:false,supportsAsyncJobs:false,supportsCancellation:false,supportedRatios:[],supportedOutputFormats:[]},enabled:true,maxConcurrent:2,currentConcurrent:0}],
+   workerAdapters:[{workerId:"w1",providerId:"p",modelId:"m",run:async input=>{expect(input.instruction).toContain("Write scene 1");expect(input.instruction).toContain("Lập kế hoạch tiền sản xuất");return{output:{scene:"ok"},costUsd:0.01};}}],
    validateOutput:async output=>({valid:!!output,errors:[]})
   });
   expect(result.workerId).toBe("w1");

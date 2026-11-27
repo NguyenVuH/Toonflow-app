@@ -1,5 +1,6 @@
 import type { AgentSpec, TaskPackage } from "../schemas/agent";
 import { agentSpecSchema, taskPackageSchema } from "../schemas/agent";
+import type { SkillRegistry } from "../skills/registry";
 
 export type CompiledAgentInstruction = {
   agentId: string;
@@ -14,7 +15,7 @@ export type CompiledAgentInstruction = {
 };
 
 /** Compile a task-scoped instruction only after validating both the AgentSpec and TaskPackage. */
-export function compileAgentInstruction(specInput: AgentSpec, taskInput: TaskPackage): CompiledAgentInstruction {
+export function compileAgentInstruction(specInput: AgentSpec, taskInput: TaskPackage, skillRegistry?: SkillRegistry): CompiledAgentInstruction {
   const spec = agentSpecSchema.parse(specInput);
   const task = taskPackageSchema.parse(taskInput);
   if (!spec.active) throw new Error(`Agent is inactive: ${spec.agentId}`);
@@ -24,6 +25,15 @@ export function compileAgentInstruction(specInput: AgentSpec, taskInput: TaskPac
   const denied = new Set(spec.deniedToolIds);
   const tools = task.allowedToolIds.filter(id => allowed.has(id) && !denied.has(id));
   if (tools.length !== task.allowedToolIds.length) throw new Error("Task requests a tool outside the AgentSpec permission scope");
+  const skillInstructions = (task.skillRefs ?? []).map(reference => {
+    if (!skillRegistry) throw new Error(`Task requires skill ${reference.skillId}@${reference.version}, but no SkillRegistry was provided`);
+    return skillRegistry.compileInstruction(reference.skillId, reference.version, {
+      taskObjective: task.objective,
+      constitutionVersion: task.constitutionVersion,
+      contextRefs: task.contextRefs.map(item => `${item.kind}:${item.id}`),
+      allowedToolIds: tools
+    });
+  });
   const instruction = [
     `ROLE: ${spec.role}`,
     `OBJECTIVE: ${task.objective}`,
@@ -38,6 +48,8 @@ export function compileAgentInstruction(specInput: AgentSpec, taskInput: TaskPac
     `ASSET REFERENCES: ${task.assetRefs.map(x => `${x.assetId}@${x.version} (${x.role})`).join(", ") || "none"}`,
     "TASK INPUT:",
     JSON.stringify(task.input),
+    "ASSIGNED SKILLS (mandatory versioned procedures):",
+    ...skillInstructions,
     "INSTRUCTIONS:",
     spec.instructions,
     "ACCEPTANCE CRITERIA:",

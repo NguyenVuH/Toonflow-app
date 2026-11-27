@@ -44,6 +44,7 @@ export const taskPackageSchema = z.object({
   requiredRuleIds: z.array(z.string().min(1)),
   assetRefs: z.array(z.object({ assetId: z.string().min(1), version: z.number().int().positive(), role: z.string().min(1) }).strict()),
   allowedToolIds: z.array(z.string().min(1)),
+  skillRefs: z.array(z.object({ skillId: z.string().min(1).max(128), version: z.number().int().positive() }).strict()).optional(),
   outputSchema: z.record(z.string(), z.json()),
   acceptanceCriteria: z.array(z.string().min(1)).min(1),
   timeoutSeconds: z.number().int().min(1).max(86400),

@@ -1,7 +1,20 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "paths": { "@/*": ["./src/*"] }
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@toonflow/comic-factory": [
+        "../../packages/comicFactory/src/index.ts"
+      ],
+      "@toonflow/comic-factory/*": [
+        "../../packages/comicFactory/src/*"
+      ]
+    },
+    "baseUrl": "."
   },
-  "include": ["src", "scripts"]
+  "include": [
+    "src"
+  ]
 }
