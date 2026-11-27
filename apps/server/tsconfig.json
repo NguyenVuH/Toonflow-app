@@ -11,8 +11,7 @@
       "@toonflow/comic-factory/*": [
         "../../packages/comicFactory/src/*"
       ]
-    },
-    "baseUrl": "."
+    }
   },
   "include": [
     "src"
