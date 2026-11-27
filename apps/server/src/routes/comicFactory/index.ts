@@ -28,7 +28,7 @@ const rootRelative = ".toonflow/comicFactory/series";
 const bibleRelative = (seriesId: string) => `${rootRelative}/${seriesId}/production-bible.json`;
 
 function extractJsonObject(text: string): Record<string, unknown> {
-  const fenced = /```(?:json)?\\s*([\\s\\S]*?)```/i.exec(text)?.[1] ?? text;
+  const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(text)?.[1] ?? text;
   const start = fenced.indexOf("{");
   const end = fenced.lastIndexOf("}");
   if (start < 0 || end <= start) throw new Error("AI planner did not return a JSON object");
