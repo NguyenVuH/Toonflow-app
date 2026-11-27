@@ -8,7 +8,9 @@
     "./schemas": "./src/schemas/index.ts",
     "./constitution": "./src/constitution/index.ts",
     "./planning": "./src/planning/index.ts",
-    "./schemas/planning": "./src/schemas/planning.ts"
+    "./schemas/planning": "./src/schemas/planning.ts",
+    "./workflow": "./src/workflow/index.ts",
+    "./schemas/workflow": "./src/schemas/workflow.ts"
   },
   "scripts": {
     "typecheck": "tsc",
@@ -17,4 +19,4 @@
   "dependencies": {
     "zod": "^4.6.2"
   }
-}
+}\n

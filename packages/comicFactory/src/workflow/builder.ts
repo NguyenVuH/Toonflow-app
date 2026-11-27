@@ -85,6 +85,7 @@ export async function buildWorkflowFromNaturalLanguage(input: {
 
 export function createCoreNodeRegistry(): NodeRegistry {
   const registry = new NodeRegistry();
+  registry.register({nodeType:"series.bible",kind:"trigger",capability:"planning",title:"Existing Production Bible",inputs:[],outputs:[{name:"bible",type:"series_bible",semanticKey:"production_bible"}],requiredTools:[],requiredCapabilities:[]});
   registry.register({nodeType:"brief.input",kind:"trigger",capability:"input",title:"Series brief",inputs:[],outputs:[{name:"brief",type:"text",semanticKey:"series_brief"}],requiredTools:[],requiredCapabilities:[]});
   registry.register({nodeType:"story.preproduction",kind:"llm",capability:"reasoning",title:"Pre-production planner",inputs:[{name:"brief",type:"text",required:true,semanticKey:"series_brief"}],outputs:[{name:"bible",type:"series_bible",semanticKey:"production_bible"}],requiredTools:["story.create_bible"],requiredCapabilities:["reasoning","text"]});
   registry.register({nodeType:"world.onboarding",kind:"tool",capability:"world",title:"World entity onboarding",inputs:[{name:"bible",type:"series_bible",required:true,semanticKey:"production_bible"}],outputs:[{name:"assets",type:"json",semanticKey:"registered_assets"}],requiredTools:["world.onboard_entities"],requiredCapabilities:["reasoning","image_generation","vision"]});

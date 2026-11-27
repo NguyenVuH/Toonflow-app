@@ -6,6 +6,8 @@ import type { Context } from "@earendil-works/pi-ai";
 import type { ModelFinalization, ModelOutcome, ModelRunFailure } from "@toonflow/multi-tenant-gateway/types";
 import { z } from "zod";
 import { createMasterProductionPlan } from "@toonflow/comic-factory/planning";
+import { buildWorkflowFromNaturalLanguage, createCoreNodeRegistry } from "@toonflow/comic-factory/workflow";
+import { workflowGraphSchema } from "@toonflow/comic-factory/schemas/workflow";
 import { productionBibleSchema } from "@toonflow/comic-factory/schemas/planning";
 import { validateFields } from "@/lib/middleware";
 import { success } from "@/lib/responseFormat";
@@ -26,6 +28,7 @@ const inputSchema = z.object({
 const seriesIdSchema = z.uuid();
 const rootRelative = ".toonflow/comicFactory/series";
 const bibleRelative = (seriesId: string) => `${rootRelative}/${seriesId}/production-bible.json`;
+const workflowRelative = (seriesId: string) => `${rootRelative}/${seriesId}/workflow.json`;
 
 function extractJsonObject(text: string): Record<string, unknown> {
   const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(text)?.[1] ?? text;
@@ -252,6 +255,139 @@ router.get("/series/:seriesId", validateFields({ directory: z.string().min(1).ma
   const { path } = await u.workspaceFile.resolveWorkspacePath(directory, bibleRelative(seriesId));
   const bible = productionBibleSchema.parse(JSON.parse(await readFile(path, "utf8")));
   res.set("Cache-Control", "no-store").json(success(bible));
+});
+
+
+const workflowInputSchema = z.object({
+  directory: z.string().min(1).max(4096),
+  goal: z.string().trim().min(1).max(8000),
+  providerId: z.string().min(1).max(96),
+  modelId: z.string().trim().min(1).max(256),
+  language: z.string().trim().min(2).max(35).default("vi"),
+  constraints: z.array(z.string().trim().min(1).max(1000)).max(40).default([]),
+}).strict();
+
+function workflowSystemPrompt(input: {
+  goal: string;
+  language: string;
+  seriesBible: unknown;
+  availableNodes: unknown[];
+  constraints: string[];
+}): string {
+  return [
+    "You are the workflow architect of an autonomous comic production studio.",
+    "Translate the user's natural-language goal into a directed acyclic graph using only the registered node types below.",
+    "Return exactly one JSON object with a single property nodes. No markdown or commentary.",
+    "Each node must contain nodeId, nodeType, title, dependsOn, config, enabled.",
+    "Never invent node types, ports, tools or capabilities. The server supplies all ports and permissions from the registry.",
+    "Start with exactly one series.bible node. The existing Production Bible is already prepared; do not regenerate it.",
+    "Include world.onboarding before storyboard/image generation. Include story.storyboard, comic.image, comic.dialogue, comic.lettering, comic.qa and comic.export unless the user explicitly requests a smaller valid workflow.",
+    "The storyboard node must depend on both series.bible and world.onboarding. The image node must depend on both storyboard and world.onboarding. Dialogue must depend on storyboard. Lettering must depend on both image and dialogue. QA must depend on lettering. Export must depend on both lettering and QA.",
+    "All nodeId values must be unique. Use simple stable ASCII IDs. Every dependency must reference a node in this response. No cycles.",
+    "Keep user instructions and story data in config only when needed; do not put secrets or credentials in config.",
+    "Requested language: " + input.language,
+    "USER GOAL:",
+    input.goal,
+    "ADDITIONAL CONSTRAINTS:",
+    ...input.constraints.map((value, index) => (index + 1) + ". " + value),
+    "CURRENT PRODUCTION BIBLE:",
+    JSON.stringify(input.seriesBible),
+    "REGISTERED NODE DEFINITIONS:",
+    JSON.stringify(input.availableNodes),
+    "REQUIRED JSON SHAPE:",
+    JSON.stringify({
+      nodes: [
+        { nodeId: "series_bible", nodeType: "series.bible", title: "Production Bible", dependsOn: [], config: {}, enabled: true },
+        { nodeId: "world_assets", nodeType: "world.onboarding", title: "Entity references", dependsOn: ["series_bible"], config: {}, enabled: true },
+        { nodeId: "storyboard", nodeType: "story.storyboard", title: "Storyboard", dependsOn: ["series_bible", "world_assets"], config: {}, enabled: true },
+        { nodeId: "panel_images", nodeType: "comic.image", title: "Panel images", dependsOn: ["storyboard", "world_assets"], config: {}, enabled: true },
+        { nodeId: "dialogue", nodeType: "comic.dialogue", title: "Dialogue", dependsOn: ["storyboard"], config: {}, enabled: true },
+        { nodeId: "lettering", nodeType: "comic.lettering", title: "Lettering", dependsOn: ["panel_images", "dialogue"], config: {}, enabled: true },
+        { nodeId: "visual_qa", nodeType: "comic.qa", title: "QA", dependsOn: ["lettering"], config: {}, enabled: true },
+        { nodeId: "chapter_export", nodeType: "comic.export", title: "Export", dependsOn: ["lettering", "visual_qa"], config: {}, enabled: true }
+      ]
+    }, null, 2)
+  ].join("\\n");
+}
+
+router.post("/series/:seriesId/workflow", validateFields({ seriesId: seriesIdSchema }, "params"), validateFields(workflowInputSchema.shape), async (req, res) => {
+  const seriesId = seriesIdSchema.parse(req.params.seriesId);
+  const input = workflowInputSchema.parse(req.body);
+  const directory = await u.workspace.resolveWorkspace(req, input.directory);
+  const { path: biblePath } = await u.workspaceFile.resolveWorkspacePath(directory, bibleRelative(seriesId));
+  const bible = productionBibleSchema.parse(JSON.parse(await readFile(biblePath, "utf8")));
+  if (bible.seriesId !== seriesId) throw Object.assign(new Error("Series identifier does not match its Production Bible"), { status: 409 });
+
+  const registry = createCoreNodeRegistry();
+  const workflowId = "comic-" + seriesId;
+  const currentWorkflowPath = workflowRelative(seriesId);
+  const { path: workflowPath } = await u.workspaceFile.resolveWorkspacePath(directory, currentWorkflowPath, true);
+  let version = 1;
+  try {
+    const current = workflowGraphSchema.parse(JSON.parse(await readFile(workflowPath, "utf8")));
+    version = current.version + 1;
+  } catch (cause) {
+    if ((cause as NodeJS.ErrnoException).code !== "ENOENT") {
+      // Invalid existing workflow must be recovered explicitly rather than silently overwritten.
+      if (cause instanceof SyntaxError || cause instanceof z.ZodError) throw Object.assign(new Error("Existing workflow is invalid; export or repair it before replacing"), { status: 409 });
+      throw cause;
+    }
+  }
+
+  const graph = await buildWorkflowFromNaturalLanguage({
+    workflowId,
+    version,
+    goal: input.goal,
+    language: input.language,
+    constitutionVersion: bible.constitutionVersion,
+    constraints: input.constraints,
+    registry,
+    createdAt: new Date().toISOString(),
+    plan: async plannerInput => {
+      const systemPrompt = workflowSystemPrompt({
+        goal: plannerInput.goal,
+        language: plannerInput.language,
+        seriesBible: bible,
+        availableNodes: plannerInput.availableNodes,
+        constraints: plannerInput.constraints,
+      });
+      const generated = await runPlannerModel({
+        req,
+        providerId: input.providerId,
+        modelId: input.modelId,
+        context: {
+          systemPrompt,
+          messages: [{ role: "user", content: "Build and validate the comic production workflow from the system instructions.", timestamp: Date.now() }],
+        },
+      });
+      return extractJsonObject(generated.text);
+    },
+  });
+
+  const release = u.workspaceFile.lockWorkspaceFiles([workflowPath]);
+  try {
+    await u.workspaceFile.writeWorkspaceFile(workflowPath, JSON.stringify(graph, null, 2));
+  } finally {
+    release();
+  }
+  res.set("Cache-Control", "no-store").json(success({
+    seriesId,
+    workflowId,
+    version: graph.version,
+    status: "workflow_ready",
+    nodeCount: graph.nodes.length,
+    edgeCount: graph.edges.length,
+    workflow: graph,
+    file: currentWorkflowPath,
+  }));
+});
+
+router.get("/series/:seriesId/workflow", validateFields({ seriesId: seriesIdSchema }, "params"), validateFields({ directory: z.string().min(1).max(4096) }, "query"), async (req, res) => {
+  const seriesId = seriesIdSchema.parse(req.params.seriesId);
+  const directory = await u.workspace.resolveWorkspace(req, req.query.directory as string);
+  const { path } = await u.workspaceFile.resolveWorkspacePath(directory, workflowRelative(seriesId));
+  const graph = workflowGraphSchema.parse(JSON.parse(await readFile(path, "utf8")));
+  res.set("Cache-Control", "no-store").json(success(graph));
 });
 
 export default router;

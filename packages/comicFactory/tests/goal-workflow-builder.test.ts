@@ -21,6 +21,25 @@ describe("AI workflow planner",()=>{
   });
   expect(graph.edges).toHaveLength(1);
  });
+ test("uses the existing Production Bible as the workflow root and links the production pipeline",async()=>{
+  const registry=createCoreNodeRegistry();
+  const graph=await buildWorkflowFromNaturalLanguage({
+   workflowId:"comic-production",version:1,goal:"Tạo chapter hoàn chỉnh",language:"vi",
+   constitutionVersion:1,constraints:[],registry,createdAt:now,
+   plan:async()=>({nodes:[
+    {nodeId:"bible",nodeType:"series.bible",title:"Bible",dependsOn:[]},
+    {nodeId:"world",nodeType:"world.onboarding",title:"World",dependsOn:["bible"]},
+    {nodeId:"story",nodeType:"story.storyboard",title:"Storyboard",dependsOn:["bible","world"]},
+    {nodeId:"images",nodeType:"comic.image",title:"Images",dependsOn:["story","world"]},
+    {nodeId:"dialogue",nodeType:"comic.dialogue",title:"Dialogue",dependsOn:["story"]},
+    {nodeId:"lettering",nodeType:"comic.lettering",title:"Lettering",dependsOn:["images","dialogue"]},
+    {nodeId:"qa",nodeType:"comic.qa",title:"QA",dependsOn:["lettering"]},
+    {nodeId:"export",nodeType:"comic.export",title:"Export",dependsOn:["lettering","qa"]}
+   ]})
+  });
+  expect(graph.nodes).toHaveLength(8);
+  expect(graph.edges).toHaveLength(9);
+ });
  test("rejects unknown node types rather than inventing unsafe nodes",async()=>{
   await expect(buildWorkflowFromNaturalLanguage({
    workflowId:"bad",version:1,goal:"x",constitutionVersion:1,constraints:[],registry:createCoreNodeRegistry(),
