@@ -1,0 +1,21 @@
+{
+  "name": "@toonflow/comic-factory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schemas": "./src/schemas/index.ts",
+    "./constitution": "./src/constitution/index.ts",
+    "./planning": "./src/planning/index.ts",
+    "./schemas/planning": "./src/schemas/planning.ts",
+    "./workflow": "./src/workflow/index.ts",
+    "./schemas/workflow": "./src/schemas/workflow.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "zod": "^4.6.2"
+  }
+}
