@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 import { mkdir, readFile, readdir } from "@toonflow/file";
@@ -8,7 +8,7 @@ import { z } from "zod";
 import { createMasterProductionPlan } from "@toonflow/comic-factory/planning";
 import { productionBibleSchema } from "@toonflow/comic-factory/schemas/planning";
 import { validateFields } from "@/lib/middleware";
-import { error, success } from "@/lib/responseFormat";
+import { success } from "@/lib/responseFormat";
 import u from "@/utils";
 
 const inputSchema = z.object({
@@ -28,7 +28,7 @@ const rootRelative = ".toonflow/comicFactory/series";
 const bibleRelative = (seriesId: string) => `${rootRelative}/${seriesId}/production-bible.json`;
 
 function extractJsonObject(text: string): Record<string, unknown> {
-  const fenced = /\`\`\`(?:json)?\\s*([\\s\\S]*?)\`\`\`/i.exec(text)?.[1] ?? text;
+  const fenced = /```(?:json)?\\s*([\\s\\S]*?)```/i.exec(text)?.[1] ?? text;
   const start = fenced.indexOf("{");
   const end = fenced.lastIndexOf("}");
   if (start < 0 || end <= start) throw new Error("AI planner did not return a JSON object");
@@ -93,7 +93,7 @@ function plannerSystemPrompt(input: {
 }
 
 async function runPlannerModel(input: {
-  req: Parameters<Parameters<typeof Router>[0]>[0];
+  req: Request;
   providerId: string;
   modelId: string;
   context: Context;
