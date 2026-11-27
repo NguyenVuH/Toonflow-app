@@ -307,7 +307,7 @@ function workflowSystemPrompt(input: {
         { nodeId: "chapter_export", nodeType: "comic.export", title: "Export", dependsOn: ["lettering", "visual_qa"], config: {}, enabled: true }
       ]
     }, null, 2)
-  ].join("\\n");
+  ].join("\n");
 }
 
 router.post("/series/:seriesId/workflow", validateFields({ seriesId: seriesIdSchema }, "params"), validateFields(workflowInputSchema.shape), async (req, res) => {

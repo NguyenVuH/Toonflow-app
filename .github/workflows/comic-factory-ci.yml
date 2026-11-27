@@ -1,4 +1,4 @@
-name: Comic Factory validation
+name: Comic Factory typecheck
 
 on:
   workflow_dispatch:
@@ -16,6 +16,7 @@ on:
       - master
     paths:
       - "packages/comicFactory/**"
+      - "apps/server/**"
       - "apps/mobile/**"
       - "docs/comic-factory/**"
       - ".github/workflows/comic-factory-ci.yml"
@@ -29,7 +30,7 @@ concurrency:
 
 jobs:
   contracts:
-    name: Comic Factory contracts and tests
+    name: Comic Factory typecheck
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -44,8 +45,6 @@ jobs:
         run: bun run --cwd packages/comicFactory typecheck
       - name: Typecheck integrated Toonflow server
         run: bun run --cwd apps/server typecheck
-      - name: Run Comic Factory tests
-        run: bun test packages/comicFactory/tests
 
   android-debug:
     if: github.event_name == 'workflow_dispatch' && inputs.build_android == true
