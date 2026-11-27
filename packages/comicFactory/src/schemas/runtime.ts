@@ -16,9 +16,7 @@ export const goalSchema = z.object({
   spentUsd: z.number().nonnegative().default(0),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime()
-}).strict().superRefine((goal, ctx) => {
-  if (goal.spentUsd > goal.budgetUsd) ctx.addIssue({ code: "custom", path: ["spentUsd"], message: "Goal spend cannot exceed budget" });
-});
+}).strict();
 
 export const taskRecordSchema = z.object({
   taskId: z.string().min(1),

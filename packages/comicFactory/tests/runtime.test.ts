@@ -31,9 +31,19 @@ describe("task runtime", () => {
     expect(recovered[0].leaseOwner).toBeUndefined();
   });
 
-  test("only schedules tasks with completed dependencies", () => {
+  test("only schedules tasks with completed dependencies and never reschedules completed IDs", () => {
     const dependent = { ...base, taskId: "task-2", dependencies: ["task-1"] };
     expect(scheduleReadyTasks([base, dependent], [], "2026-11-26T00:01:00.000Z", 5)).toEqual(["task-1"]);
-    expect(scheduleReadyTasks([base, dependent], ["task-1"], "2026-11-26T00:01:00.000Z", 5)).toEqual(["task-1", "task-2"]);
+    expect(scheduleReadyTasks([base, dependent], ["task-1"], "2026-11-26T00:01:00.000Z", 5)).toEqual(["task-2"]);
+  });
+
+  test("applies bounded retry backoff and waits until the retry is due", () => {
+    const leased = transitionTask(base, { type: "lease", workerId: "worker-a", now: "2026-11-26T00:01:00.000Z", leaseSeconds: 60 });
+    const running = transitionTask(leased, { type: "start", workerId: "worker-a", now: "2026-11-26T00:01:01.000Z" });
+    const retry = transitionTask(running, { type: "fail", workerId: "worker-a", now: "2026-11-26T00:01:02.000Z", error: "temporary", retryable: true });
+    expect(retry.status).toBe("retry_wait");
+    expect(retry.nextAttemptAt).toBe("2026-11-26T00:01:07.000Z");
+    expect(scheduleReadyTasks([retry], [], "2026-11-26T00:01:06.000Z", 1)).toEqual([]);
+    expect(scheduleReadyTasks([retry], [], "2026-11-26T00:01:07.000Z", 1)).toEqual(["task-1"]);
   });
 });

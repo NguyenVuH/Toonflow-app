@@ -28,7 +28,8 @@ export function evaluateGoal(input:{
   const goal=goalSchema.parse(input.goal);
   const tasks=input.tasks.map(task=>taskRecordSchema.parse(task));
   const blockers:string[]=[];
-  if(goal.spentUsd>goal.budgetUsd) blockers.push("Goal budget exceeded");
+  const taskSpend = tasks.reduce((total, task) => total + task.actualCostUsd, 0);
+  if(Math.max(goal.spentUsd, taskSpend) > goal.budgetUsd + 1e-9) blockers.push("Goal budget exceeded");
   if(tasks.some(task=>task.status==="failed")) blockers.push("One or more tasks permanently failed");
   const required=new Set(input.requiredTaskIds??tasks.map(task=>task.taskId));
   const completed=new Set(tasks.filter(task=>task.status==="succeeded").map(task=>task.taskId));

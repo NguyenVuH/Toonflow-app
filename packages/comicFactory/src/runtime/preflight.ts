@@ -24,7 +24,8 @@ export function validateProductionPreflight(
   if (bible.budgetUsd <= 0) blockers.push("A positive production budget is required");
   if (bible.chapterPlans.some(plan => plan.status === "draft" || plan.status === "blocked")) blockers.push("All initial chapter plans must be ready before image production");
   const ready = new Set(readyAssetIds);
-  const missingAssets = bible.assetPlanRefs.filter(id => !ready.has(id));
+  const requiredAssetIds = [...new Set([...bible.seasonPlans, ...bible.chapterPlans].flatMap(plan => plan.requiredAssetIds))];
+  const missingAssets = requiredAssetIds.filter(id => !ready.has(id));
   if (missingAssets.length) blockers.push("Required planned assets are not ready: " + missingAssets.join(", "));
   const tools = new Set(registeredToolIds);
   const missingTools = [...new Set(graphInput.nodes.flatMap(node => node.requiredToolIds ?? []))].filter(id => !tools.has(id));

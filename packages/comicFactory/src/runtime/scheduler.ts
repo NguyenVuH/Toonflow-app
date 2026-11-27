@@ -6,7 +6,7 @@ export type TaskTransition =
   | { type: "start"; workerId: string; now: string }
   | { type: "validate"; workerId: string; now: string }
   | { type: "succeed"; workerId: string; now: string; actualCostUsd: number }
-  | { type: "fail"; workerId: string; now: string; error: string; retryable: boolean }
+  | { type: "fail"; workerId: string; now: string; error: string; retryable: boolean; retryDelaySeconds?: number }
   | { type: "cancel"; now: string };
 
 const activeStatuses = new Set(["leased", "running", "validating"]);
@@ -42,6 +42,7 @@ export function transitionTask(input: TaskRecord, event: TaskTransition): TaskRe
       next.actualCostUsd = event.actualCostUsd;
       delete next.leaseOwner;
       delete next.leaseExpiresAt;
+      delete next.nextAttemptAt;
       delete next.lastError;
       break;
     case "fail":
@@ -50,7 +51,15 @@ export function transitionTask(input: TaskRecord, event: TaskTransition): TaskRe
       next.lastError = event.error.slice(0, 4000);
       delete next.leaseOwner;
       delete next.leaseExpiresAt;
-      next.status = event.retryable && task.attempts < task.maxAttempts ? "retry_wait" : "failed";
+      if (event.retryable && task.attempts < task.maxAttempts) {
+        const delay = event.retryDelaySeconds ?? Math.min(300, 5 * 2 ** Math.max(0, task.attempts - 1));
+        if (!Number.isFinite(delay) || delay < 1 || delay > 3600) throw new Error("Retry delay must be between 1 and 3600 seconds");
+        next.status = "retry_wait";
+        next.nextAttemptAt = new Date(Date.parse(event.now) + delay * 1000).toISOString();
+      } else {
+        next.status = "failed";
+        delete next.nextAttemptAt;
+      }
       break;
     case "cancel":
       if (["succeeded", "failed", "cancelled"].includes(task.status)) throw new Error("Terminal task cannot be cancelled");
@@ -77,6 +86,7 @@ export function recoverExpiredLeases(tasks: TaskRecord[], now: string): TaskReco
       status: task.attempts < task.maxAttempts ? "retry_wait" : "failed",
       leaseOwner: undefined,
       leaseExpiresAt: undefined,
+      nextAttemptAt: task.attempts < task.maxAttempts ? new Date(nowMs + Math.min(300, 5 * 2 ** Math.max(0, task.attempts - 1)) * 1000).toISOString() : undefined,
       lastError: "Worker lease expired; task recovered by scheduler",
       updatedAt: now
     });
@@ -88,7 +98,7 @@ export function scheduleReadyTasks(tasks: TaskRecord[], completedIds: string[], 
   const completed = new Set(completedIds);
   const nowMs = Date.parse(now);
   return tasks.map(task => taskRecordSchema.parse(task)).filter(task =>
-    ["pending", "ready", "retry_wait"].includes(task.status) &&
+    !completed.has(task.taskId) && ["pending", "ready", "retry_wait"].includes(task.status) &&
     (!task.nextAttemptAt || Date.parse(task.nextAttemptAt) <= nowMs) &&
     task.dependencies.every(id => completed.has(id))
   ).sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.taskId.localeCompare(b.taskId))
