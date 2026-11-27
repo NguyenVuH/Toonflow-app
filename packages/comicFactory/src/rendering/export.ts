@@ -22,7 +22,7 @@ export async function exportRenderedChapter(input:{
   const signature=signatures[input.format]!;
   if(!signature.every((byte,index)=>bytes[index]===byte))throw new Error(`Export adapter returned invalid ${input.format.toUpperCase()} signature`);
  }
- const digest=await crypto.subtle.digest("SHA-256",bytes);
+ const digest=await crypto.subtle.digest("SHA-256",new Uint8Array(bytes).buffer as ArrayBuffer);
  const sha256=[...new Uint8Array(digest)].map(byte=>byte.toString(16).padStart(2,"0")).join("");
  const safeTitle=input.chapter.title.normalize("NFC").replace(/[^\p{L}\p{N}_-]+/gu,"-").replace(/^-+|-+$/g,"").slice(0,80)||"chapter";
  return {format:input.format,fileName:`${safeTitle}.${input.format}`,mimeType:mime[input.format],bytes,sha256};
