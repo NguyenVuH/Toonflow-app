@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./schemas": "./src/schemas/index.ts",
-    "./constitution": "./src/constitution/index.ts"
+    "./constitution": "./src/constitution/index.ts",
+    "./planning": "./src/planning/index.ts",
+    "./schemas/planning": "./src/schemas/planning.ts"
   },
   "scripts": {
     "typecheck": "tsc",

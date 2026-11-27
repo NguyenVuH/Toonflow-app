@@ -223,6 +223,7 @@ import route220 from "./routes/workspaces/files/reveal";
 import route221 from "./routes/workspaces/files/write";
 import route222 from "./routes/workspaces/list";
 import route223 from "./routes/workspaces/selectDirectory";
+import route224 from "./routes/comicFactory";
 
 export default (app: Express) => {
   app.use("/api/agent", route1);
@@ -448,4 +449,5 @@ export default (app: Express) => {
   app.use("/api/workspaces/files/write", route221);
   app.use("/api/workspaces/list", route222);
   app.use("/api/workspaces/selectDirectory", route223);
+  app.use("/api/comicFactory", route224);
 }
