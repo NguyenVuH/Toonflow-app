@@ -15,6 +15,8 @@ export const workflowNodeSchema = z.object({
   inputs: z.array(z.object({ name: z.string().min(1), type: workflowValueTypeSchema, required: z.boolean().default(true), semanticKey: z.string().optional() }).strict()),
   outputs: z.array(z.object({ name: z.string().min(1), type: workflowValueTypeSchema, semanticKey: z.string().optional() }).strict()),
   dependsOn: z.array(z.string().min(1)).default([]),
+  requiredToolIds: z.array(z.string().min(1)).optional(),
+  requiredCapabilities: z.array(z.string().min(1)).optional(),
   config: z.record(z.string(), z.json()).default({}),
   instructionRef: z.string().optional(),
   enabled: z.boolean().default(true)

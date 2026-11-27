@@ -39,6 +39,7 @@ export function evaluateGoal(input:{
   if(goal.status==="planning") return {status:"preflight",progress,nextAction:"preflight",blockers};
   if(goal.status==="preflight") {
     if(!input.productionBible) return {status:"blocked",progress,nextAction:"blocked",blockers:["Production Bible is missing"]};
+    if(!input.productionBible.preflightPassed) return {status:"blocked",progress,nextAction:"blocked",blockers:["Production preflight has not been approved"]};
     const result=validateMasterProductionPlan(input.productionBible);
     if(!result.valid) return {status:"blocked",progress,nextAction:"blocked",blockers:result.errors};
     return {status:"running",progress,nextAction:"execute",blockers};

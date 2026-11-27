@@ -1,5 +1,5 @@
 import type { ComicPanel, DialogueRecord } from "../schemas/comic";
-export type LetteringOptions={fontFamily?:string;fontSize?:number;padding?:number;bubbleFill?:string;bubbleStroke?:string;textFill?:string;maxLines?:number};
+export type LetteringOptions={fontFamily?:string;fontSize?:number;padding?:number;bubbleFill?:string;bubbleStroke?:string;textFill?:string;maxLines?:number;includeImage?:boolean};
 function xml(value:string):string{return value.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");}
 function wrapText(value:string,max:number):string[]{const lines:string[]=[];let line="";for(const word of value.split(/\s+/u)){if(!line){line=word;continue;}if([...line,...(" "+word)].length<=max)line+=" "+word;else{lines.push(line);line=word;}}if(line)lines.push(line);return lines.length?lines:[""];}
 export function renderDialogueOverlay(panel:ComicPanel,options:LetteringOptions={}):string{
@@ -21,5 +21,6 @@ export function renderDialogueOverlay(panel:ComicPanel,options:LetteringOptions=
   const title=d.speakerEntityId?'<title>'+xml(d.speakerEntityId)+'</title>':"";
   return '<g data-dialogue-id="'+xml(d.dialogueId)+'">'+tail+'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+radius+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="3"'+dash+'/>'+title+text+'</g>';
  }).join("");
- return '<svg xmlns="http://www.w3.org/2000/svg" width="'+panel.width+'" height="'+panel.height+'" viewBox="0 0 '+panel.width+' '+panel.height+'"><image href="'+xml(panel.imagePath)+'" x="0" y="0" width="'+panel.width+'" height="'+panel.height+'" preserveAspectRatio="none"/>'+parts+'</svg>';
+ const background=options.includeImage===false?"":'<image href="'+xml(panel.imagePath)+'" x="0" y="0" width="'+panel.width+'" height="'+panel.height+'" preserveAspectRatio="none"/>';
+ return '<svg xmlns="http://www.w3.org/2000/svg" width="'+panel.width+'" height="'+panel.height+'" viewBox="0 0 '+panel.width+' '+panel.height+'">'+background+parts+'</svg>';
 }
