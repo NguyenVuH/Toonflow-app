@@ -42,6 +42,8 @@ jobs:
         run: bun install
       - name: Typecheck Comic Factory package
         run: bun run --cwd packages/comicFactory typecheck
+      - name: Typecheck integrated Toonflow server
+        run: bun run --cwd apps/server typecheck
       - name: Run Comic Factory tests
         run: bun test packages/comicFactory/tests
 
