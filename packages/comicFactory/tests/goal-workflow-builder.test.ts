@@ -38,7 +38,7 @@ describe("AI workflow planner",()=>{
    ]})
   });
   expect(graph.nodes).toHaveLength(8);
-  expect(graph.edges).toHaveLength(9);
+  expect(graph.edges).toHaveLength(11);
  });
  test("rejects unknown node types rather than inventing unsafe nodes",async()=>{
   await expect(buildWorkflowFromNaturalLanguage({
